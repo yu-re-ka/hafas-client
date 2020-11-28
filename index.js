@@ -7,6 +7,7 @@ const omit = require('lodash/omit')
 const {v4: uuidV4} = require('uuid')
 const {randomBytes} = require('crypto')
 const {gunzipSync} = require('zlib')
+const {DateTime} = require('luxon')
 
 const defaultProfile = require('./lib/default-profile')
 const validateProfile = require('./lib/validate-profile')
@@ -659,6 +660,84 @@ const createClient = (profile, userAgent, opt = {}) => {
 		}
 	}
 
+	const subscribeToJourney = async (userId, channelIds, journeyRefreshToken) => {
+		if (!isNonEmptyString(userId)) {
+			throw new TypeError('userId must be a non-empty string')
+		}
+		if (!Array.isArray(channelIds) || channelIds.length === 0) {
+			throw new TypeError('channelIds must be a non-empty array')
+		}
+		for (let i = 0; i < channelIds.length; i++) {
+			if (!isNonEmptyString(channelIds[i])) {
+				throw new TypeError(`channelIds[${i}] must be a non-empty string`)
+			}
+		}
+		if (!isNonEmptyString(journeyRefreshToken)) {
+			throw new TypeError('journeyRefreshToken must be a non-empty string')
+		}
+
+		opt = {
+			tripWarnings: true, // Subscribe to train information (failures, delays, change of platforms)?
+			routeWarnings: true, // Subscribe to route information (disturbances & construction sites)?
+			startMinutesBeforeJourney: 30, // Start monitoring x minutes before the journey begins.
+			minimumDelay: 1, // Only send notifications with at least x minutes of (vehicle) delay.
+			fromDate: Date.now(),
+			duration: 3, // Subscribe for 3 days.
+			...opt,
+		}
+		const untilDate = DateTime
+		.fromMillis(opt.fromDate, {locale: profile.locale, zone: profile.timezone})
+		.plus({days: 3})
+		.toMillis()
+
+		const req = {
+			userId,
+			channels: channelIds.map((channelId) => ({channelId})),
+			conSubscr: {
+				ctxRecon: journeyRefreshToken,
+				hysteresis: {
+					minDeviationInterval: opt.minimumDelay,
+					notificationStart: opt.startMinutesBeforeJourney,
+				},
+				monitorFlags: [
+					// todo: what exactly do these values stand for?
+					...(opt.tripWarnings ? ['OF', 'PF', 'DF', 'AF', 'DV'] : []),
+					...(opt.routeWarnings ? ['FTF'] : []),
+				],
+				serviceDays: {
+					beginDate: profile.formatDate(profile, +new Date(opt.fromDate)),
+					endDate: profile.formatDate(profile, untilDate),
+					// todo: allow custom weekdays via the `selectedDays` "binary string"
+				},
+			},
+		}
+
+		const {res} = await profile.request({profile, opt}, userAgent, {
+			meth: 'SubscrCreate',
+			req,
+		})
+		_checkSubscriptionsResultCode(res)
+		return res.subscrId
+	}
+
+	const unsubscribe = async (userId, subscriptionId) => {
+		if (!isNonEmptyString(userId)) {
+			throw new TypeError('userId must be a non-empty string')
+		}
+		if (subscriptionId === null || subscriptionId === undefined) {
+			throw new TypeError('missing subscriptionId')
+		}
+
+		const {res} = await profile.request({profile, opt}, userAgent, {
+			meth: 'SubscrDelete',
+			req: {
+				userId,
+				subscrId: subscriptionId,
+			},
+		})
+		_checkSubscriptionsResultCode(res)
+	}
+
 	const client = {
 		departures,
 		arrivals,
@@ -679,6 +758,8 @@ const createClient = (profile, userAgent, opt = {}) => {
 		client.createSubscriptionsUser = createSubscriptionsUser
 		client.subscriptions = subscriptions
 		client.subscription = subscription
+		client.subscribeToJourney = subscribeToJourney
+		client.unsubscribe = unsubscribe
 	}
 	Object.defineProperty(client, 'profile', {value: profile})
 	return client
