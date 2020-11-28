@@ -628,15 +628,19 @@ const createClient = (profile, userAgent, opt = {}) => {
 		return res.conSubscrL.map(parseSubscription)
 	}
 
-	const subscription = async (userId, subscriptionId) => {
+	const subscription = async (userId, subscriptionId, opt = {}) => {
 		if (!isNonEmptyString(userId)) {
 			throw new TypeError('userId must be a non-empty string')
 		}
 		if (subscriptionId === null || subscriptionId === undefined) {
 			throw new TypeError('missing subscriptionId')
 		}
+		opt = {
+			journey: false, // parse & expose the subscription's journey?
+			...opt,
+		}
 
-		const {res} = await profile.request({profile, opt}, userAgent, {
+		const {res, common} = await profile.request({profile, opt}, userAgent, {
 			meth: 'SubscrDetails',
 			req: {
 				userId,
@@ -644,15 +648,28 @@ const createClient = (profile, userAgent, opt = {}) => {
 			},
 		})
 		_checkSubscriptionsResultCode(res)
+		const ctx = {profile, opt, common, res}
+
+		let journey = null
+		if (opt.journey && res.conSubscr.data && res.conSubscr.data.slice(0, 5) === 'GZip:') {
+			const gzipped = Buffer.from(res.conSubscr.data.slice(5), 'base64')
+			const gunzipped = gunzipSync(gzipped)
+			const {
+				connection,
+				// todo: version, search, cst, checksum
+				// todo: reminderOrigin, reminderChange, reminderCheckout, reminderDestination
+			} = JSON.parse(gunzipped.toString('utf8'))
+			journey = profile.parseJourney(ctx, connection)
+		}
 
 		return {
 			id: subscriptionId,
-			journeyRefreshToken: res.conSubscr.ctxRecon,
 			// todo: serviceDays
 			hysteresis: res.conSubscr.hysteresis,
 			monitorFlags: res.conSubscr.monitorFlags,
-			// todo: data
 			connectionInfo: res.conSubscr.connectionInfo,
+			journeyRefreshToken: res.conSubscr.ctxRecon,
+			journey,
 			// todo: parse & give a proper name
 			rtEvents: res.eventHistory && res.eventHistory.rtEvents || null,
 			himEvents: res.eventHistory && res.eventHistory.himEvents || null,
