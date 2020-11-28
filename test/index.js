@@ -24,6 +24,7 @@ require('./vsn-departures')
 require('./mobiliteit-lu-line')
 require('./rsag-journey')
 require('./vrn-subscription-journey')
+require('./vrn-subscription')
 
 require('./throttle')
 require('./retry')
