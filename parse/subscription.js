@@ -24,6 +24,25 @@ const parseSubscription = (ctx, id, s) => {
 		res.journey = profile.parseJourney(ctx, connection)
 	}
 
+	if (opt.activeDays && s.serviceDays) {
+		// todo: move this somewhere else
+		const {DateTime} = require('luxon')
+
+		res.activeDays = Object.create(null)
+		const days = s.serviceDays.selectedDays
+		let d = DateTime.fromObject({
+			zone: profile.timezone, locale: profile.locale,
+			year: parseInt(s.serviceDays.beginDate.slice(0, 4)),
+			month: parseInt(s.serviceDays.beginDate.slice(4, 6)),
+			day: parseInt(s.serviceDays.beginDate.slice(6, 8)),
+			hour: 0, minute: 0, second: 0, millisecond: 0
+		})
+		for (let b = 0; b < days.length; b++) {
+			res.activeDays[d.toISODate()] = !!parseInt(days[b])
+			d = d.plus({days: 1})
+		}
+	}
+
 	return res
 }
 

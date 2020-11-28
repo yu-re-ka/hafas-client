@@ -637,6 +637,7 @@ const createClient = (profile, userAgent, opt = {}) => {
 		}
 		opt = {
 			journey: false, // parse & expose the subscription's journey?
+			activeDays: false, // parse & expose days the subscription is active for?
 			...opt,
 		}
 
