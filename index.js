@@ -648,28 +648,10 @@ const createClient = (profile, userAgent, opt = {}) => {
 			},
 		})
 		_checkSubscriptionsResultCode(res)
+
 		const ctx = {profile, opt, common, res}
-
-		let journey = null
-		if (opt.journey && res.conSubscr.data && res.conSubscr.data.slice(0, 5) === 'GZip:') {
-			const gzipped = Buffer.from(res.conSubscr.data.slice(5), 'base64')
-			const gunzipped = gunzipSync(gzipped)
-			const {
-				connection,
-				// todo: version, search, cst, checksum
-				// todo: reminderOrigin, reminderChange, reminderCheckout, reminderDestination
-			} = JSON.parse(gunzipped.toString('utf8'))
-			journey = profile.parseJourney(ctx, connection)
-		}
-
 		return {
-			id: subscriptionId,
-			// todo: serviceDays
-			hysteresis: res.conSubscr.hysteresis,
-			monitorFlags: res.conSubscr.monitorFlags,
-			connectionInfo: res.conSubscr.connectionInfo,
-			journeyRefreshToken: res.conSubscr.ctxRecon,
-			journey,
+			subscription: profile.parseSubscription(ctx, subscriptionId, res.conSubscr),
 			// todo: parse & give a proper name
 			rtEvents: res.eventHistory && res.eventHistory.rtEvents || null,
 			himEvents: res.eventHistory && res.eventHistory.himEvents || null,
