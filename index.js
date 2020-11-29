@@ -694,6 +694,8 @@ const createClient = (profile, userAgent, opt = {}) => {
 			userId,
 			channels: channelIds.map((channelId) => ({channelId})),
 			conSubscr: {
+				// todo: data?
+				// seems like without it, HAFAS ignores the data inside `journeyRefreshToken`
 				ctxRecon: journeyRefreshToken,
 				hysteresis: {
 					minDeviationInterval: opt.minimumDelay,
