@@ -3,6 +3,8 @@ use ijson::{ijson, IValue};
 use super::{Profile, Requester, Result, Error};
 use std::collections::HashMap;
 use async_trait::async_trait;
+use serde::Deserialize;
+use serde::de::DeserializeOwned;
 
 #[derive(Debug)]
 pub struct HafasClient<P: Profile + Sync + Send, R: Requester + Sync + Send> {
@@ -21,12 +23,24 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
 
 #[async_trait]
 pub trait Client {
-    async fn request(&self, req_json: IValue) -> Result<IValue>;
+    async fn request<T: DeserializeOwned>(&self, req_json: IValue) -> Result<T>;
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct HafasResponse<T> {
+    svc_res_l: Vec<HafasResponse2<T>>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct HafasResponse2<T> {
+    res: T,
+    err: String,
 }
 
 #[async_trait]
 impl<P: Profile + Sync + Send, R: Requester + Sync + Send> Client for HafasClient<P, R> {
-    async fn request(&self, req_json: IValue) -> Result<IValue> {
+    async fn request<T: DeserializeOwned>(&self, req_json: IValue) -> Result<T> {
 		let mut req_json = ijson!({
 			"lang": "de",
             "svcReqL": vec![req_json],
@@ -51,11 +65,11 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> Client for HafasClien
         self.profile.prepare_headers(&mut headers);
 
         let bytes = self.requester.request(url, req_str, headers).await?;
-        let data: IValue = serde_json::from_slice(&bytes)?;
+        //eprintln!("{:#?}", serde_json::from_slice::<serde_json::Value>(&bytes));
+        let mut data: HafasResponse<T> =  serde_json::from_slice(&bytes)?;
+        let HafasResponse2 { res, err } = data.svc_res_l.remove(0);
+        if err != "OK" { return Err(Error::Hafas(err.clone())) }
 
-        let status: &str = data["svcResL"][0]["err"].as_string().ok_or_else(|| Error::InvalidData)?;
-        if status != "OK" { return Err(Error::Hafas(status.to_string())) }
-
-        Ok(data)
+        Ok(res)
     }
 }

@@ -1,5 +1,14 @@
-mod location;
-mod products;
-
-pub use location::*;
-pub use products::*;
+pub mod location;
+pub mod products;
+pub mod date;
+pub mod line;
+pub mod operator;
+pub mod leg;
+pub mod stopover;
+pub mod arrival_or_departure;
+pub mod load_factor;
+pub mod remark;
+pub mod polyline;
+pub mod journey;
+pub mod journeys_response;
+pub mod suggestions_response;

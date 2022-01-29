@@ -1,4 +1,4 @@
-use super::{Products, Location, Accessibility};
+use super::{Products, Place, Accessibility, TariffClass};
 use ijson::ijson;
 
 pub trait ToHafas<T> {
@@ -22,7 +22,7 @@ impl ToHafas<u16> for Products {
     }
 }
 
-fn format_coord(coordinate: f64) -> u64 {
+fn format_coord(coordinate: f32) -> u64 {
     (coordinate * 1000000.0) as u64
 }
 
@@ -33,32 +33,32 @@ fn format_identifier(components: Vec<(&str, &str)>) -> String {
         .join("")
 }
 
-impl ToHafas<ijson::IValue> for Location {
+impl ToHafas<ijson::IValue> for Place {
     fn to_hafas(&self) -> ijson::IValue {
         match self {
-            Location::Stop { id, .. } => ijson!({
+            Place::Stop { id, .. } => ijson!({
                 "type": "S",
                 "lid": format_identifier(vec![
                     ("A", "1"),
                     ("L", id),
                 ])
             }),
-            Location::Address { address, coordinates } => ijson!({
+            Place::Address { address, location } => ijson!({
                 "type": "A",
                 "lid": format_identifier(vec![
                     ("A", "4"),
                     ("O", address),
-                    ("X", &format_coord(coordinates.0).to_string()),
-                    ("Y", &format_coord(coordinates.1).to_string()),
+                    ("X", &format_coord(location.latitude).to_string()),
+                    ("Y", &format_coord(location.longitude).to_string()),
                 ])
             }),
-            Location::Point { id, coordinates, .. } => ijson!({
+            Place::Point { id, location, .. } => ijson!({
                 "type": "P",
                 "lid": format_identifier(vec![
                     ("A", "4"),
                     ("L", id),
-                    ("X", &format_coord(coordinates.0).to_string()),
-                    ("Y", &format_coord(coordinates.1).to_string()),
+                    ("X", &format_coord(location.latitude).to_string()),
+                    ("Y", &format_coord(location.longitude).to_string()),
                 ])
             }),
         }
@@ -72,5 +72,14 @@ impl ToHafas<String> for Accessibility {
             Accessibility::Partial => "limitedBarrierfree",
             Accessibility::Complete => "completeBarrierfree",
         }.to_string()
+    }
+}
+
+impl ToHafas<u64> for TariffClass {
+    fn to_hafas(&self) -> u64 {
+        match *self {
+            TariffClass::First => 1,
+            TariffClass::Second => 2,
+        }
     }
 }

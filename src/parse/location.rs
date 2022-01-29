@@ -1,23 +1,22 @@
-use crate::{Result, Location, Coordinates};
+use crate::{Result, Place, Location};
 use super::products::parse_products;
 use serde::Deserialize;
-use ijson::IValue;
 
 #[derive(Debug, Deserialize)]
-struct HafasCoordinates {
+pub struct HafasLocation {
     x: u64,
     y: u64,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
-enum HafasLocation {
+#[serde(untagged)]
+pub enum HafasPlace {
     #[serde(rename(deserialize = "S"))]
     #[serde(rename_all = "camelCase")]
     Stop {
         ext_id: String,
         name: String,
-        crd: HafasCoordinates,
+        crd: HafasLocation,
         p_cls: u16,
     },
     #[serde(rename(deserialize = "P"))]
@@ -25,37 +24,38 @@ enum HafasLocation {
     Point {
         ext_id: String,
         name: String,
-        crd: HafasCoordinates,
+        crd: HafasLocation,
     },
     #[serde(rename(deserialize = "A"))]
     #[serde(rename_all = "camelCase")]
     Address {
         name: String,
-        crd: HafasCoordinates,
+        crd: HafasLocation,
     },
 }
 
-fn parse_coordinates(coordinates: HafasCoordinates) -> Coordinates {
-    Coordinates (coordinates.x as f64 / 1000000.0, coordinates.y as f64 / 1000000.0)
+fn parse_location(location: HafasLocation) -> Location {
+    Location {
+        latitude: location.x as f32 / 1000000.0,
+        longitude: location.y as f32 / 1000000.0
+    }
 }
 
-pub fn parse_location(val: IValue) -> Result<Location> {
-    let hafas_point: HafasLocation = ijson::from_value(&val)?;
-
+pub fn parse_place(hafas_point: HafasPlace) -> Result<Place> {
     Ok(match hafas_point {
-        HafasLocation::Stop { ext_id, name, crd, p_cls } => Location::Stop {
-            coordinates: parse_coordinates(crd),
+        HafasPlace::Stop { ext_id, name, crd, p_cls } => Place::Stop {
+            location: parse_location(crd),
             id: ext_id,
             name: name,
             products: parse_products(p_cls),
         },
-        HafasLocation::Point { ext_id, name, crd } => Location::Point {
-            coordinates: parse_coordinates(crd),
+        HafasPlace::Point { ext_id, name, crd } => Place::Point {
+            location: parse_location(crd),
             id: ext_id,
             name: name,
         },
-        HafasLocation::Address { name, crd } => Location::Address {
-            coordinates: parse_coordinates(crd),
+        HafasPlace::Address { name, crd } => Place::Address {
+            location: parse_location(crd),
             address: name,
         },
     })

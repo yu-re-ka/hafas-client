@@ -1,13 +1,16 @@
 use chrono::offset::Utc;
 use chrono::NaiveDateTime;
-use crate::{Location, Accessibility, Products, Result, Profile, Requester, Client, Error};
+use crate::{Place, Accessibility, Products, Result, Profile, Requester, Client, Error, TariffClass};
 use crate::client::HafasClient;
 use crate::format::ToHafas;
 use ijson::ijson;
+use crate::parse::journeys_response::parse_journeys_response;
+use serde::Serialize;
+use crate::Journey;
 
 #[derive(Debug, Default)]
 pub struct JourneyOptions {
-    //pub via: Option<Location>,
+    //pub via: Option<Place>,
     pub earlier_ref: Option<String>,
     pub later_ref: Option<String>,
     pub results: Option<u64>,
@@ -24,15 +27,23 @@ pub struct JourneyOptions {
     pub arrival: Option<i64>,
     pub departure: Option<i64>,
     pub products: Option<Products>,
+    pub tariff_class: Option<TariffClass>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct JourneysResponse {
+    pub earlier_ref: Option<String>,
+    pub later_ref: Option<String>,
+    pub journeys: Vec<Journey>,
 }
 
 impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
     pub async fn journeys(
         &self,
-        from: Location,
-        to: Location,
+        from: Place,
+        to: Place,
         options: JourneyOptions,
-    ) -> Result<()> {
+    ) -> Result<JourneysResponse> {
         let (when, is_departure) = match (options.departure, options.arrival) {
             (Some(_), Some(_)) => {
                 Err(Error::InvalidInput("departure and arrival are mutually exclusive".to_string()))?
@@ -41,6 +52,8 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
             (None, Some(arrival)) => (NaiveDateTime::from_timestamp(arrival, 0), false),
             (None, None) => (Utc::now().naive_utc(), true),
         };
+
+        let tariff_class = options.tariff_class.unwrap_or(TariffClass::Second);
 
         let data = self.request(ijson!({
     		"cfg": {
@@ -78,7 +91,7 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
     			"outDate": when.format("%Y%m%d").to_string(),
     			"outTime": when.format("%H%M%S").to_string(),
     			"trfReq": {
-    				"jnyCl": 2,
+    				"jnyCl": tariff_class.to_hafas(),
     				"tvlrProf": [
     					{
     						"type": "E",
@@ -90,8 +103,6 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
     		}
         })).await?;
 
-        println!("{:#?}", data["svcResL"][0]["res"]);
-
-        Ok(())
+        parse_journeys_response(data, tariff_class)
     }
 }
