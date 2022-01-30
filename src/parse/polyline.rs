@@ -1,5 +1,4 @@
 use crate::ParseResult;
-use crate::Error;
 use geojson::{Feature, Value, Geometry};
 use serde::Deserialize;
 

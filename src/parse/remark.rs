@@ -1,5 +1,4 @@
 use crate::ParseResult;
-use crate::Error;
 use crate::Remark;
 use crate::RemarkType;
 use serde::Deserialize;

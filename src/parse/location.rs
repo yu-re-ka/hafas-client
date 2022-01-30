@@ -1,4 +1,4 @@
-use crate::{ParseResult, Place, Location, Error};
+use crate::{ParseResult, Place, Location};
 use super::products::parse_products;
 use serde::Deserialize;
 
@@ -25,24 +25,24 @@ fn parse_location(location: HafasLocation) -> Location {
     }
 }
 
-pub fn parse_place(data: HafasPlace) -> ParseResult<Option<Place>> {
+pub fn parse_place(data: HafasPlace) -> ParseResult<Place> {
     let HafasPlace { r#type, name, crd, ext_id, p_cls } = data;
-    Ok(match r#type.as_deref() {
-        Some("S") => Some(Place::Stop {
+    match r#type.as_deref() {
+        Some("S") => Ok(Place::Stop {
             location: parse_location(crd),
             id: ext_id.ok_or_else(|| "Missing ext_id")?,
             name: name,
             products: parse_products(p_cls.ok_or_else(|| "Missing p_cls")?),
         }),
-        Some("P") => Some(Place::Point {
+        Some("P") => Ok(Place::Point {
             location: parse_location(crd),
             id: ext_id.ok_or_else(|| "Missing ext_id")?,
             name: name,
         }),
-        Some("A") => Some(Place::Address {
+        Some("A") => Ok(Place::Address {
             location: parse_location(crd),
             address: name,
         }),
-        _ => None
-    })
+        other => Err(format!("Unknown location type: {:?}", other).into()),
+    }
 }

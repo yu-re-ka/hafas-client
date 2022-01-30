@@ -175,6 +175,12 @@ pub struct Leg {
     remarks: Option<Vec<Remark>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     polyline: Option<FeatureCollection>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    is_walking: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    is_transfer: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    distance: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]

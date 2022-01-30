@@ -5,7 +5,6 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 use chrono::NaiveDate;
 use chrono::Duration;
-use chrono::LocalResult;
 
 pub fn parse_date(time: Option<String>, tz_offset: Option<i32>, date: &NaiveDate) -> ParseResult<Option<DateTime<FixedOffset>>> {
     let time = match time {

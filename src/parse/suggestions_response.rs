@@ -14,8 +14,8 @@ pub struct HafasSuggestionsResponseMatch {
 }
 
 pub fn parse_suggestions_response(data: HafasSuggestionsResponse) -> ParseResult<SuggestionsResponse> {
-    data.r#match.loc_l
+    Ok(data.r#match.loc_l
         .into_iter()
-        .filter_map(|p| parse_place(p).transpose())
-        .collect::<ParseResult<Vec<_>>>()
+        .filter_map(|p| parse_place(p).ok())
+        .collect::<Vec<_>>())
 }

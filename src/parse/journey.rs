@@ -1,5 +1,4 @@
 use crate::ParseResult;
-use crate::Error;
 use crate::parse::journeys_response::CommonData;
 use crate::Journey;
 use chrono::NaiveDate;

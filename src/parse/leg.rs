@@ -5,13 +5,18 @@ use chrono::NaiveDate;
 use crate::parse::journeys_response::CommonData;
 use crate::parse::stopover::{HafasStopover, parse_stopover};
 use crate::parse::arrival_or_departure::{HafasArrivalOrDeparture, parse_arrival_or_departure};
-use crate::parse::polyline::parse_polyline;
 use geojson::FeatureCollection;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HafasLegJnyPolyG {
     poly_x_l: Vec<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HafasLegJnyLoad {
+    tcoc_x: Vec<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +29,7 @@ pub struct HafasLegJny {
     stop_l: Option<Vec<HafasStopover>>,
     msg_l: Vec<HafasLegJnyMsg>,
     poly_g: Option<HafasLegJnyPolyG>,
+    d_trn_cmp_s_x: Option<HafasLegJnyLoad>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,16 +63,35 @@ pub struct HafasLegDep {
 }
 
 #[derive(Debug, Deserialize)]
+pub enum HafasLegType {
+    #[serde(rename = "JNY")]
+    Journey,
+    #[serde(rename = "WALK")]
+    Walk,
+    #[serde(rename = "TRSF")]
+    Transfer,
+    #[serde(rename = "DEVI")]
+    Devi,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HafasLegGis {
+    dist: u64,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct HafasLeg {
     dep: HafasLegDep,
     arr: HafasLegArr,
     jny: Option<HafasLegJny>,
+    gis: Option<HafasLegGis>,
+    r#type: HafasLegType,
 }
 
 pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
-    let HafasLeg { dep, arr, jny } = data;
-    let origin = common.places.get(dep.loc_x).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?.clone();
-    let destination = common.places.get(arr.loc_x).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?.clone();
+    let HafasLeg { dep, arr, jny, gis, r#type } = data;
+    let origin = common.places.get(dep.loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?;
+    let destination = common.places.get(arr.loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?;
     let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: dep.d_t_z_offset,
         time_s: dep.d_time_s,
@@ -93,24 +118,46 @@ pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Parse
     let mut trip_id = None;
     let mut direction = None;
     let mut stopovers = None;
+    let mut load_factor = None;
     let mut remarks = None;
     let mut polyline = None;
-    if let Some(jny) = jny {
-        let HafasLegJny { prod_x, is_rchbl, jid, dir_txt, stop_l, msg_l, poly_g } = jny;
-        line = prod_x.map(|x| common.lines.get(x).ok_or_else(|| format!("Invalid line index: {}", x))).transpose()?.cloned();
-        reachable = is_rchbl;
-        trip_id = Some(jid);
-        direction = dir_txt;
-        stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
-        remarks = Some(msg_l.into_iter().map(|x| common.remarks.get(x.rem_x).cloned().ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())).collect::<ParseResult<_>>()?);
-        polyline = poly_g.map(|poly_g| -> ParseResult<_> {
-            let mut features = vec![];
-            for x in poly_g.poly_x_l {
-                let mut polyline = common.polylines.get(x).ok_or_else(|| format!("Invalid polyline index: {}", x))?.clone();
-                features.append(&mut polyline);
-            }
-            Ok(FeatureCollection { features, bbox: None, foreign_members: None })
-        }).transpose()?;
+    let mut is_walking = None;
+    let mut is_transfer = None;
+    let mut distance = None;
+
+    println!("{:?} {:?}", r#type, jny.as_ref().and_then(|jny| jny.prod_x).and_then(|prod_x| common.lines.get(prod_x)));
+    match r#type {
+        HafasLegType::Journey => {
+            let HafasLegJny { prod_x, is_rchbl, jid, dir_txt, stop_l, msg_l, poly_g, d_trn_cmp_s_x } = jny.ok_or_else(|| "Missing jny field")?;
+            line = prod_x.map(|x| common.lines.get(x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid line index: {}", x))).transpose()?;
+            reachable = is_rchbl;
+            trip_id = Some(jid);
+            direction = dir_txt;
+            stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
+            remarks = Some(msg_l.into_iter().map(|x| common.remarks.get(x.rem_x).cloned().ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())).collect::<ParseResult<_>>()?);
+            polyline = poly_g.map(|poly_g| -> ParseResult<_> {
+                let mut features = vec![];
+                for x in poly_g.poly_x_l {
+                    let mut polyline = common.polylines.get(x).ok_or_else(|| format!("Invalid polyline index: {}", x))?.clone();
+                    features.append(&mut polyline);
+                }
+                Ok(FeatureCollection { features, bbox: None, foreign_members: None })
+            }).transpose()?;
+            load_factor = d_trn_cmp_s_x.map(|x: HafasLegJnyLoad| -> ParseResult<_> {
+                let mut entries = vec![];
+                for i in x.tcoc_x {
+                    entries.push(common.load_factors.get(i).ok_or_else(|| format!("Invalid load factor index: {}", i))?.clone());
+                }
+                Ok(entries.into_iter().find(|x| x.class == common.tariff_class).map(|x| x.load))
+            }).transpose()?.and_then(|x| x);
+        },
+        HafasLegType::Walk => {
+            is_walking = Some(true);
+            distance = Some(gis.ok_or_else(|| "missing field gis")?.dist);
+        },
+        HafasLegType::Transfer | HafasLegType::Devi => {
+            is_transfer = Some(true);
+        },
     }
 
     Ok(Leg {
@@ -132,8 +179,11 @@ pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Parse
         trip_id,
         direction,
         stopovers,
-        load_factor: None, //common.load_factors.iter().find(|x| x.class == common.tariff_class).map(|x| x.load),
+        load_factor,
         remarks,
         polyline,
+        is_walking,
+        is_transfer,
+        distance,
     })
 }

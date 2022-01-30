@@ -1,4 +1,3 @@
-use crate::Error;
 use crate::ParseResult;
 use crate::Products;
 use crate::Product;

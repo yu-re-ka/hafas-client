@@ -45,8 +45,8 @@ struct HafasJourneysResponseCommon {
 #[derive(Debug)]
 pub struct CommonData {
     pub tariff_class: TariffClass,
-    pub places: Vec<Place>,
-    pub lines: Vec<Line>,
+    pub places: Vec<Option<Place>>,
+    pub lines: Vec<Option<Line>>,
     pub load_factors: Vec<LoadFactorEntry>,
     pub operators: Vec<Operator>,
     pub remarks: Vec<Remark>,
@@ -60,8 +60,8 @@ pub fn parse_journeys_response(data: HafasJourneysResponse, tariff_class: Tariff
         let operators = op_l.into_iter().map(|x| parse_operator(x)).collect::<ParseResult<_>>()?;
         CommonData {
             tariff_class,
-            places: loc_l.into_iter().filter_map(|x| parse_place(x).transpose()).collect::<ParseResult<_>>()?,
-            lines: prod_l.into_iter().map(|x| parse_line(x, &operators)).collect::<ParseResult<_>>()?,
+            places: loc_l.into_iter().map(|x| parse_place(x).ok()).collect(),
+            lines: prod_l.into_iter().map(|x| parse_line(x, &operators).ok()).collect(),
             load_factors: tcoc_l.unwrap_or(vec![]).into_iter().map(|x| parse_load_factor_entry(x)).collect::<ParseResult<_>>()?,
             remarks: rem_l.into_iter().map(|x| parse_remark(x)).collect::<ParseResult<_>>()?,
             polylines: poly_l.into_iter().map(|x| parse_polyline(x)).collect::<ParseResult<_>>()?,
