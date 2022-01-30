@@ -25,6 +25,6 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
             }
         })).await?;
 
-        parse_suggestions_response(data)
+        Ok(parse_suggestions_response(data)?)
     }
 }

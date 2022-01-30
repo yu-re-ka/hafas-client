@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use crate::Place;
 use crate::Line;
 use crate::Operator;
@@ -18,6 +18,7 @@ use crate::parse::remark::parse_remark;
 use crate::parse::remark::HafasRemark;
 use crate::parse::polyline::HafasPolyline;
 use crate::parse::polyline::parse_polyline;
+use crate::parse::load_factor::parse_load_factor_entry;
 use serde::Deserialize;
 use crate::api::journeys::JourneysResponse;
 
@@ -36,7 +37,7 @@ struct HafasJourneysResponseCommon {
     loc_l: Vec<HafasPlace>,
     prod_l: Vec<HafasLine>,
     op_l: Vec<HafasOperator>,
-    tcoc_l: Vec<HafasLoadFactorEntry>,
+    tcoc_l: Option<Vec<HafasLoadFactorEntry>>,
     rem_l: Vec<HafasRemark>,
     poly_l: Vec<HafasPolyline>,
 }
@@ -52,18 +53,18 @@ pub struct CommonData {
     pub polylines: Vec<Vec<geojson::Feature>>,
 }
 
-pub fn parse_journeys_response(data: HafasJourneysResponse, tariff_class: TariffClass) -> Result<JourneysResponse> {
+pub fn parse_journeys_response(data: HafasJourneysResponse, tariff_class: TariffClass) -> ParseResult<JourneysResponse> {
     let HafasJourneysResponse { out_ctx_scr_b, out_ctx_scr_f, out_con_l, common } = data;
     let common_data = {
         let HafasJourneysResponseCommon { loc_l, prod_l, op_l, tcoc_l, rem_l, poly_l } = common;
-        let operators = op_l.into_iter().map(|x| parse_operator(x)).collect::<Result<_>>()?;
+        let operators = op_l.into_iter().map(|x| parse_operator(x)).collect::<ParseResult<_>>()?;
         CommonData {
             tariff_class,
-            places: loc_l.into_iter().map(|x| parse_place(x)).collect::<Result<_>>()?,
-            lines: prod_l.into_iter().map(|x| parse_line(x, &operators)).collect::<Result<_>>()?,
-            load_factors: tcoc_l.into_iter().map(|x| x.into()).collect(),
-            remarks: rem_l.into_iter().map(|x| parse_remark(x)).collect::<Result<_>>()?,
-            polylines: poly_l.into_iter().map(|x| parse_polyline(x)).collect::<Result<_>>()?,
+            places: loc_l.into_iter().filter_map(|x| parse_place(x).transpose()).collect::<ParseResult<_>>()?,
+            lines: prod_l.into_iter().map(|x| parse_line(x, &operators)).collect::<ParseResult<_>>()?,
+            load_factors: tcoc_l.unwrap_or(vec![]).into_iter().map(|x| parse_load_factor_entry(x)).collect::<ParseResult<_>>()?,
+            remarks: rem_l.into_iter().map(|x| parse_remark(x)).collect::<ParseResult<_>>()?,
+            polylines: poly_l.into_iter().map(|x| parse_polyline(x)).collect::<ParseResult<_>>()?,
             operators,
         }
     };
@@ -71,6 +72,6 @@ pub fn parse_journeys_response(data: HafasJourneysResponse, tariff_class: Tariff
     Ok(JourneysResponse {
         earlier_ref: out_ctx_scr_b,
         later_ref: out_ctx_scr_f,
-        journeys: out_con_l.into_iter().map(|x| parse_journey(x, &common_data)).collect::<Result<_>>()?,
+        journeys: out_con_l.into_iter().map(|x| parse_journey(x, &common_data)).collect::<ParseResult<_>>()?,
     })
 }

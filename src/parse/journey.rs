@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use crate::Error;
 use crate::parse::journeys_response::CommonData;
 use crate::Journey;
@@ -14,10 +14,10 @@ pub struct HafasJourney {
     sec_l: Vec<HafasLeg>,
 }
 
-pub fn parse_journey(data: HafasJourney, common: &CommonData) -> Result<Journey> {
+pub fn parse_journey(data: HafasJourney, common: &CommonData) -> ParseResult<Journey> {
     let HafasJourney { date, ctx_recon, sec_l } = data;
 
-    let date = NaiveDate::parse_from_str(&date, "%Y%m%d").map_err(|_| Error::InvalidData)?;
+    let date = NaiveDate::parse_from_str(&date, "%Y%m%d")?;
 
     /*if j{"trfRes"}{"statusCode"}.getStr == "OK":
       result.price = some(Price(
@@ -27,7 +27,7 @@ pub fn parse_journey(data: HafasJourney, common: &CommonData) -> Result<Journey>
 
     Ok(Journey {
         refresh_token: ctx_recon,
-        legs: sec_l.into_iter().map(|x| parse_leg(x, common, &date)).collect::<Result<_>>()?,
+        legs: sec_l.into_iter().map(|x| parse_leg(x, common, &date)).collect::<ParseResult<_>>()?,
     })
 
     /*# combine walking legs

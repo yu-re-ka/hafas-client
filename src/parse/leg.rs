@@ -1,6 +1,5 @@
 use crate::Leg;
-use crate::Result;
-use crate::Error;
+use crate::ParseResult;
 use serde::Deserialize;
 use chrono::NaiveDate;
 use crate::parse::journeys_response::CommonData;
@@ -64,10 +63,10 @@ pub struct HafasLeg {
     jny: Option<HafasLegJny>,
 }
 
-pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Result<Leg> {
+pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
     let HafasLeg { dep, arr, jny } = data;
-    let origin = common.places.get(dep.loc_x).ok_or(Error::InvalidData)?.clone();
-    let destination = common.places.get(arr.loc_x).ok_or(Error::InvalidData)?.clone();
+    let origin = common.places.get(dep.loc_x).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?.clone();
+    let destination = common.places.get(arr.loc_x).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?.clone();
     let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: dep.d_t_z_offset,
         time_s: dep.d_time_s,
@@ -98,20 +97,20 @@ pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Resul
     let mut polyline = None;
     if let Some(jny) = jny {
         let HafasLegJny { prod_x, is_rchbl, jid, dir_txt, stop_l, msg_l, poly_g } = jny;
-        line = prod_x.and_then(|x| common.lines.get(x)).cloned();
+        line = prod_x.map(|x| common.lines.get(x).ok_or_else(|| format!("Invalid line index: {}", x))).transpose()?.cloned();
         reachable = is_rchbl;
         trip_id = Some(jid);
         direction = dir_txt;
-        stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<Result<_>>()).transpose()?;
-        remarks = Some(msg_l.into_iter().filter_map(|x| common.remarks.get(x.rem_x).cloned()).collect());
-        polyline = poly_g.map(|x| {
-            let features = x.poly_x_l.into_iter().filter_map(|x| common.polylines.get(x).cloned()).flatten().collect();
-            FeatureCollection {
-                features,
-                bbox: None,
-                foreign_members: None,
+        stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
+        remarks = Some(msg_l.into_iter().map(|x| common.remarks.get(x.rem_x).cloned().ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())).collect::<ParseResult<_>>()?);
+        polyline = poly_g.map(|poly_g| -> ParseResult<_> {
+            let mut features = vec![];
+            for x in poly_g.poly_x_l {
+                let mut polyline = common.polylines.get(x).ok_or_else(|| format!("Invalid polyline index: {}", x))?.clone();
+                features.append(&mut polyline);
             }
-        })
+            Ok(FeatureCollection { features, bbox: None, foreign_members: None })
+        }).transpose()?;
     }
 
     Ok(Leg {
@@ -133,7 +132,7 @@ pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Resul
         trip_id,
         direction,
         stopovers,
-        load_factor: common.load_factors.iter().find(|x| x.class == common.tariff_class).map(|x| x.load),
+        load_factor: None, //common.load_factors.iter().find(|x| x.class == common.tariff_class).map(|x| x.load),
         remarks,
         polyline,
     })

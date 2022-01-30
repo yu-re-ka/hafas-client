@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono::FixedOffset;
@@ -22,7 +22,7 @@ pub struct ArrivalOrDeparture {
     pub cancelled: Option<bool>,
 }
 
-pub fn parse_arrival_or_departure(data: HafasArrivalOrDeparture, date: &NaiveDate) -> Result<ArrivalOrDeparture> {
+pub fn parse_arrival_or_departure(data: HafasArrivalOrDeparture, date: &NaiveDate) -> ParseResult<ArrivalOrDeparture> {
     let HafasArrivalOrDeparture { t_z_offset, time_s, time_r, platf_s, platf_r, cncl } = data;
     let planned_time = parse_date(time_s, t_z_offset, date)?;
     let rt_time = parse_date(time_r, t_z_offset, date)?;

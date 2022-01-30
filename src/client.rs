@@ -47,6 +47,7 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> Client for HafasClien
         });
         self.profile.prepare_body(&mut req_json);
         let req_str = serde_json::to_string(&req_json)?;
+        eprintln!("{}", req_str);
 
         let mut hasher = Md5::new();
         hasher.update(&req_str);
@@ -65,7 +66,7 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> Client for HafasClien
         self.profile.prepare_headers(&mut headers);
 
         let bytes = self.requester.request(url, req_str, headers).await?;
-        //eprintln!("{:#?}", serde_json::from_slice::<serde_json::Value>(&bytes));
+        eprintln!("{}", serde_json::to_string(&serde_json::from_slice::<serde_json::Value>(&bytes)?)?);
         let mut data: HafasResponse<T> =  serde_json::from_slice(&bytes)?;
         let HafasResponse2 { res, err } = data.svc_res_l.remove(0);
         if err != "OK" { return Err(Error::Hafas(err.clone())) }

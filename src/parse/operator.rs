@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use crate::Operator;
 use serde::Deserialize;
 
@@ -7,7 +7,7 @@ pub struct HafasOperator {
     name: String,
 }
 
-pub fn parse_operator(data: HafasOperator) -> Result<Operator> {
+pub fn parse_operator(data: HafasOperator) -> ParseResult<Operator> {
     let HafasOperator { name } = data;
     Ok(Operator {
         id: name.clone(), // FIXME

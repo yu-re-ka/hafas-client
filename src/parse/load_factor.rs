@@ -1,5 +1,5 @@
 use crate::TariffClass;
-use crate::Result;
+use crate::ParseResult;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use crate::LoadFactor;
@@ -52,11 +52,9 @@ pub struct LoadFactorEntry {
     pub load: LoadFactor,
 }
 
-impl From<HafasLoadFactorEntry> for LoadFactorEntry {
-    fn from(h: HafasLoadFactorEntry) -> LoadFactorEntry {
-        LoadFactorEntry {
-            class: h.c.into(),
-            load: h.r.into(),
-        }
-    }
+pub fn parse_load_factor_entry(h: HafasLoadFactorEntry) -> ParseResult<LoadFactorEntry> {
+    Ok(LoadFactorEntry {
+        class: h.c.into(),
+        load: h.r.into(),
+    })
 }

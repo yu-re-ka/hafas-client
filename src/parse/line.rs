@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use crate::Line;
 use crate::Operator;
 use serde::Deserialize;
@@ -20,7 +20,7 @@ pub struct HafasLine {
     cls: u16,
 }
 
-pub fn parse_line(data: HafasLine, operators: &Vec<Operator>) -> Result<Line> {
+pub fn parse_line(data: HafasLine, operators: &Vec<Operator>) -> ParseResult<Line> {
     let HafasLine { line, add_name, name, prod_ctx, opr_x, cls } = data;
     let product = parse_product(cls)?;
     Ok(Line {

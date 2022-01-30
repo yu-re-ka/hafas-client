@@ -1,3 +1,5 @@
+#![feature(backtrace)]
+
 pub mod error;
 pub mod profile;
 pub mod requester;
@@ -9,7 +11,7 @@ pub mod format;
 pub use client::Client;
 pub use profile::Profile;
 pub use requester::Requester;
-pub use error::{Error, Result};
+pub use error::{Error, Result, ParseResult};
 use chrono::FixedOffset;
 use chrono::DateTime;
 use geojson::FeatureCollection;

@@ -46,7 +46,7 @@ impl ToHafas<ijson::IValue> for Place {
             Place::Address { address, location } => ijson!({
                 "type": "A",
                 "lid": format_identifier(vec![
-                    ("A", "4"),
+                    ("A", "2"),
                     ("O", address),
                     ("X", &format_coord(location.latitude).to_string()),
                     ("Y", &format_coord(location.longitude).to_string()),

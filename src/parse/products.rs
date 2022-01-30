@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::Result;
+use crate::ParseResult;
 use crate::Products;
 use crate::Product;
 
@@ -18,7 +18,7 @@ pub fn parse_products(p_cls: u16) -> Products {
     }
 }
 
-pub fn parse_product(p_cls: u16) -> Result<Product> {
+pub fn parse_product(p_cls: u16) -> ParseResult<Product> {
     Ok(match p_cls {
          0b0000_0000_0001 => Product::NationalExp,
          0b0000_0000_0010 => Product::National,
@@ -30,6 +30,6 @@ pub fn parse_product(p_cls: u16) -> Result<Product> {
          0b0000_1000_0000 => Product::Subway,
          0b0001_0000_0000 => Product::Tram,
          0b0010_0000_0000 => Product::Taxi,
-         _ => return Err(Error::InvalidData),
+         _ => return Err(format!("Unknown product bit: {:b}", p_cls).into()),
     })
 }

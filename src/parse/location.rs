@@ -1,4 +1,4 @@
-use crate::{Result, Place, Location};
+use crate::{ParseResult, Place, Location, Error};
 use super::products::parse_products;
 use serde::Deserialize;
 
@@ -9,29 +9,13 @@ pub struct HafasLocation {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum HafasPlace {
-    #[serde(rename(deserialize = "S"))]
-    #[serde(rename_all = "camelCase")]
-    Stop {
-        ext_id: String,
-        name: String,
-        crd: HafasLocation,
-        p_cls: u16,
-    },
-    #[serde(rename(deserialize = "P"))]
-    #[serde(rename_all = "camelCase")]
-    Point {
-        ext_id: String,
-        name: String,
-        crd: HafasLocation,
-    },
-    #[serde(rename(deserialize = "A"))]
-    #[serde(rename_all = "camelCase")]
-    Address {
-        name: String,
-        crd: HafasLocation,
-    },
+#[serde(rename_all = "camelCase")]
+pub struct HafasPlace {
+    r#type: Option<String>,
+    name: String,
+    crd: HafasLocation,
+    ext_id: Option<String>,
+    p_cls: Option<u16>,
 }
 
 fn parse_location(location: HafasLocation) -> Location {
@@ -41,22 +25,24 @@ fn parse_location(location: HafasLocation) -> Location {
     }
 }
 
-pub fn parse_place(hafas_point: HafasPlace) -> Result<Place> {
-    Ok(match hafas_point {
-        HafasPlace::Stop { ext_id, name, crd, p_cls } => Place::Stop {
+pub fn parse_place(data: HafasPlace) -> ParseResult<Option<Place>> {
+    let HafasPlace { r#type, name, crd, ext_id, p_cls } = data;
+    Ok(match r#type.as_deref() {
+        Some("S") => Some(Place::Stop {
             location: parse_location(crd),
-            id: ext_id,
+            id: ext_id.ok_or_else(|| "Missing ext_id")?,
             name: name,
-            products: parse_products(p_cls),
-        },
-        HafasPlace::Point { ext_id, name, crd } => Place::Point {
+            products: parse_products(p_cls.ok_or_else(|| "Missing p_cls")?),
+        }),
+        Some("P") => Some(Place::Point {
             location: parse_location(crd),
-            id: ext_id,
+            id: ext_id.ok_or_else(|| "Missing ext_id")?,
             name: name,
-        },
-        HafasPlace::Address { name, crd } => Place::Address {
+        }),
+        Some("A") => Some(Place::Address {
             location: parse_location(crd),
             address: name,
-        },
+        }),
+        _ => None
     })
 }

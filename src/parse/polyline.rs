@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::ParseResult;
 use crate::Error;
 use geojson::{Feature, Value, Geometry};
 use serde::Deserialize;
@@ -17,9 +17,9 @@ pub struct HafasPolyline {
     pp_loc_ref_l: Vec<HafasPolylineLocRef>,
 }
 
-pub fn parse_polyline(data: HafasPolyline) -> Result<Vec<Feature>> {
+pub fn parse_polyline(data: HafasPolyline) -> ParseResult<Vec<Feature>> {
     let HafasPolyline { crd_enc_y_x, pp_loc_ref_l } = data;
-    let coords = polyline::decode_polyline(&crd_enc_y_x, 5).map_err(|_| Error::InvalidData)?;
+    let coords = polyline::decode_polyline(&crd_enc_y_x, 5)?;
 
     let features = coords.into_points().into_iter()
         .map(|point| {

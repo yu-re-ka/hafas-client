@@ -103,6 +103,6 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
     		}
         })).await?;
 
-        parse_journeys_response(data, tariff_class)
+        Ok(parse_journeys_response(data, tariff_class)?)
     }
 }
