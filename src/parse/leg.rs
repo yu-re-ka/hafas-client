@@ -90,8 +90,12 @@ pub struct HafasLeg {
 
 pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
     let HafasLeg { dep, arr, jny, gis, r#type } = data;
-    let origin = common.places.get(dep.loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?;
-    let destination = common.places.get(arr.loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?;
+    let origin = common.places.get(dep.loc_x).cloned()
+        .ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?
+        .ok_or_else(|| format!("Parse error place index: {}", arr.loc_x))?;
+    let destination = common.places.get(arr.loc_x).cloned()
+        .ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?
+        .ok_or_else(|| format!("Parse error place index: {}", arr.loc_x))?;
     let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: dep.d_t_z_offset,
         time_s: dep.d_time_s,
@@ -125,16 +129,22 @@ pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> Parse
     let mut is_transfer = None;
     let mut distance = None;
 
-    println!("{:?} {:?}", r#type, jny.as_ref().and_then(|jny| jny.prod_x).and_then(|prod_x| common.lines.get(prod_x)));
     match r#type {
         HafasLegType::Journey => {
             let HafasLegJny { prod_x, is_rchbl, jid, dir_txt, stop_l, msg_l, poly_g, d_trn_cmp_s_x } = jny.ok_or_else(|| "Missing jny field")?;
-            line = prod_x.map(|x| common.lines.get(x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid line index: {}", x))).transpose()?;
+            line = prod_x.map(|x| -> ParseResult<_> {
+                Ok(common.lines.get(x).cloned()
+                    .ok_or_else(|| format!("Invalid line index: {}", x))?
+                    .ok_or_else(|| format!("Parse error line index: {}", x))?)
+            }).transpose()?;
             reachable = is_rchbl;
             trip_id = Some(jid);
             direction = dir_txt;
             stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
-            remarks = Some(msg_l.into_iter().map(|x| common.remarks.get(x.rem_x).cloned().ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())).collect::<ParseResult<_>>()?);
+            remarks = Some(msg_l.into_iter().map(|x| {
+                common.remarks.get(x.rem_x).cloned()
+                    .ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())
+            }).collect::<ParseResult<_>>()?);
             polyline = poly_g.map(|poly_g| -> ParseResult<_> {
                 let mut features = vec![];
                 for x in poly_g.poly_x_l {

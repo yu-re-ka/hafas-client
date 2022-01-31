@@ -6,9 +6,10 @@ use crate::format::ToHafas;
 use ijson::ijson;
 use crate::parse::journeys_response::parse_journeys_response;
 use serde::Serialize;
+use serde::Deserialize;
 use crate::Journey;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct JourneyOptions {
     //pub via: Option<Place>,
     pub earlier_ref: Option<String>,

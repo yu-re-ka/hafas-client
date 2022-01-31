@@ -16,18 +16,18 @@ use chrono::FixedOffset;
 use chrono::DateTime;
 use geojson::FeatureCollection;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 /* Types */
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Location {
     pub latitude: f32,
     pub longitude: f32,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Place {
     Stop {
         id: String,
@@ -55,7 +55,7 @@ pub struct Station {
     pub products: Products,
 }*/
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Products {
     pub national_exp: bool,
@@ -70,7 +70,7 @@ pub struct Products {
     pub taxi: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Product {
     NationalExp,
@@ -112,13 +112,13 @@ impl Product {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum TariffClass {
     First,
     Second,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Accessibility {
     r#None,
     Partial,
