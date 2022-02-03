@@ -1,4 +1,4 @@
-use super::{Products, Place, Accessibility, TariffClass};
+use super::{Products, Place, Accessibility, TariffClass, Location, Stop};
 use ijson::ijson;
 
 pub trait ToHafas<T> {
@@ -8,16 +8,16 @@ pub trait ToHafas<T> {
 impl ToHafas<u16> for Products {
     fn to_hafas(&self) -> u16 {
         let mut p_cls = 0;
-        if self.national_exp  { p_cls |= 0b0000_0000_0001; }
-        if self.national      { p_cls |= 0b0000_0000_0010; }
-        if self.regional_exp  { p_cls |= 0b0000_0000_0100; }
-        if self.regional      { p_cls |= 0b0000_0000_1000; }
-        if self.suburban      { p_cls |= 0b0000_0001_0000; }
-        if self.bus           { p_cls |= 0b0000_0010_0000; }
-        if self.ferry         { p_cls |= 0b0000_0100_0000; }
-        if self.subway        { p_cls |= 0b0000_1000_0000; }
-        if self.tram          { p_cls |= 0b0001_0000_0000; }
-        if self.taxi          { p_cls |= 0b0010_0000_0000; }
+        if self.national_express  { p_cls |= 0b0000_0000_0001; }
+        if self.national          { p_cls |= 0b0000_0000_0010; }
+        if self.regional_exp      { p_cls |= 0b0000_0000_0100; }
+        if self.regional          { p_cls |= 0b0000_0000_1000; }
+        if self.suburban          { p_cls |= 0b0000_0001_0000; }
+        if self.bus               { p_cls |= 0b0000_0010_0000; }
+        if self.ferry             { p_cls |= 0b0000_0100_0000; }
+        if self.subway            { p_cls |= 0b0000_1000_0000; }
+        if self.tram              { p_cls |= 0b0001_0000_0000; }
+        if self.taxi              { p_cls |= 0b0010_0000_0000; }
         p_cls
     }
 }
@@ -36,31 +36,45 @@ fn format_identifier(components: Vec<(&str, &str)>) -> String {
 impl ToHafas<ijson::IValue> for Place {
     fn to_hafas(&self) -> ijson::IValue {
         match self {
-            Place::Stop { id, .. } => ijson!({
-                "type": "S",
-                "lid": format_identifier(vec![
-                    ("A", "1"),
-                    ("L", id),
-                ])
-            }),
-            Place::Address { address, location } => ijson!({
-                "type": "A",
-                "lid": format_identifier(vec![
-                    ("A", "2"),
-                    ("O", address),
-                    ("X", &format_coord(location.latitude).to_string()),
-                    ("Y", &format_coord(location.longitude).to_string()),
-                ])
-            }),
-            Place::Point { id, location, .. } => ijson!({
-                "type": "P",
-                "lid": format_identifier(vec![
-                    ("A", "4"),
-                    ("L", id),
-                    ("X", &format_coord(location.latitude).to_string()),
-                    ("Y", &format_coord(location.longitude).to_string()),
-                ])
-            }),
+            Place::Stop(stop) => {
+                let Stop { id, .. } = stop;
+                ijson!({
+                    "type": "S",
+                    "lid": format_identifier(vec![
+                        ("A", "1"),
+                        ("L", id),
+                    ])
+                })
+            },
+            Place::Location(location) => {
+                match location {
+                    Location::Address { address, latitude, longitude } => ijson!({
+                        "type": "A",
+                        "lid": format_identifier(vec![
+                            ("A", "2"),
+                            ("O", address),
+                            ("X", &format_coord(*latitude).to_string()),
+                            ("Y", &format_coord(*longitude).to_string()),
+                        ])
+                    }),
+                    Location::Point { id, latitude, longitude, .. } => {
+                        let x = format_coord(*latitude).to_string();
+                        let y = format_coord(*longitude).to_string();
+                        let mut lid = vec![
+                            ("A", "4"),
+                            ("X", &x),
+                            ("Y", &y),
+                        ];
+                        if let Some(id) = id {
+                            lid.push(("L", id));
+                        }
+                        ijson!({
+                            "type": "P",
+                            "lid": format_identifier(lid)
+                        })
+                    },
+                }
+            },
         }
     }
 }

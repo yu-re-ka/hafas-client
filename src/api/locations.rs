@@ -1,14 +1,14 @@
 use ijson::ijson;
 use crate::{Result, Client, Profile, Requester, Place};
 use crate::client::HafasClient;
-use crate::parse::suggestions_response::parse_suggestions_response;
-use crate::parse::suggestions_response::HafasSuggestionsResponse;
+use crate::parse::locations_response::parse_locations_response;
+use crate::parse::locations_response::HafasLocationsResponse;
 
-pub type SuggestionsResponse = Vec<Place>;
+pub type LocationsResponse = Vec<Place>;
 
 impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
-    pub async fn suggestions(&self, query: &str, results: Option<u64>) -> Result<SuggestionsResponse> {
-        let data: HafasSuggestionsResponse = self.request(ijson!({
+    pub async fn locations(&self, query: &str, results: Option<u64>) -> Result<LocationsResponse> {
+        let data: HafasLocationsResponse = self.request(ijson!({
             "cfg": {
                 "polyEnc": "GPA"
             },
@@ -25,6 +25,6 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
             }
         })).await?;
 
-        Ok(parse_suggestions_response(data)?)
+        Ok(parse_locations_response(data)?)
     }
 }

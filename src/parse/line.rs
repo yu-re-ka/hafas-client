@@ -17,12 +17,12 @@ pub struct HafasLine {
     name: Option<String>,
     prod_ctx: Option<HafasLineProdCtx>,
     opr_x: Option<usize>,
-    cls: u16,
+    cls: Option<u16>,
 }
 
 pub fn parse_line(data: HafasLine, operators: &Vec<Operator>) -> ParseResult<Line> {
     let HafasLine { line, add_name, name, prod_ctx, opr_x, cls } = data;
-    let product = parse_product(cls)?;
+    let product = parse_product(cls.ok_or_else(|| "Missing cls field")?)?;
     Ok(Line {
         name: line.or(add_name).or(name),
         fahrt_nr: prod_ctx.and_then(|x| x.num.clone()),

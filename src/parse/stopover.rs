@@ -2,7 +2,7 @@ use crate::ParseResult;
 use crate::Stopover;
 use chrono::NaiveDate;
 use serde::Deserialize;
-use crate::parse::journeys_response::CommonData;
+use crate::parse::common::CommonData;
 use crate::parse::arrival_or_departure::{HafasArrivalOrDeparture, parse_arrival_or_departure};
 
 #[derive(Debug, Deserialize)]
@@ -23,7 +23,7 @@ pub struct HafasStopover {
     d_cncl: Option<bool>,
 }
 
-pub fn parse_stopover(data: HafasStopover, common: &CommonData, date: &NaiveDate) -> ParseResult<Stopover> {
+pub(crate) fn parse_stopover(data: HafasStopover, common: &CommonData, date: &NaiveDate) -> ParseResult<Stopover> {
     let HafasStopover { loc_x, a_t_z_offset, a_time_s, a_time_r, a_platf_s, a_platf_r, a_cncl, d_t_z_offset, d_time_s, d_time_r, d_platf_s, d_platf_r, d_cncl } = data;
     let stop = common.places.get(loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index {}", loc_x))?;
     let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {

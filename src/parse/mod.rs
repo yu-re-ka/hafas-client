@@ -11,4 +11,5 @@ pub mod remark;
 pub mod polyline;
 pub mod journey;
 pub mod journeys_response;
-pub mod suggestions_response;
+pub mod locations_response;
+pub mod common;

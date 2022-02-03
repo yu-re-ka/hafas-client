@@ -1,5 +1,5 @@
 use crate::ParseResult;
-use crate::parse::journeys_response::CommonData;
+use crate::parse::common::CommonData;
 use crate::Journey;
 use chrono::NaiveDate;
 use serde::Deserialize;
@@ -13,7 +13,7 @@ pub struct HafasJourney {
     sec_l: Vec<HafasLeg>,
 }
 
-pub fn parse_journey(data: HafasJourney, common: &CommonData) -> ParseResult<Journey> {
+pub(crate) fn parse_journey(data: HafasJourney, common: &CommonData) -> ParseResult<Journey> {
     let HafasJourney { date, ctx_recon, sec_l } = data;
 
     let date = NaiveDate::parse_from_str(&date, "%Y%m%d")?;

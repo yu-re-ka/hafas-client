@@ -42,7 +42,7 @@ struct HafasResponse2<T> {
 impl<P: Profile + Sync + Send, R: Requester + Sync + Send> Client for HafasClient<P, R> {
     async fn request<T: DeserializeOwned>(&self, req_json: IValue) -> Result<T> {
 		let mut req_json = ijson!({
-			"lang": "de",
+			"lang": "en",
             "svcReqL": vec![req_json],
         });
         self.profile.prepare_body(&mut req_json);

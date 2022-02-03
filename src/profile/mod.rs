@@ -1,5 +1,7 @@
 #[cfg(feature = "db-profile")]
 pub mod db;
+#[cfg(feature = "sncf-profile")]
+pub mod sncf;
 
 use std::collections::HashMap;
 use ijson::IValue;

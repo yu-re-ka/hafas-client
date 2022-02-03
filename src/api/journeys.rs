@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::Journey;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
-pub struct JourneyOptions {
+pub struct JourneysOptions {
     //pub via: Option<Place>,
     pub earlier_ref: Option<String>,
     pub later_ref: Option<String>,
@@ -43,7 +43,7 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
         &self,
         from: Place,
         to: Place,
-        options: JourneyOptions,
+        options: JourneysOptions,
     ) -> Result<JourneysResponse> {
         let (when, is_departure) = match (options.departure, options.arrival) {
             (Some(_), Some(_)) => {

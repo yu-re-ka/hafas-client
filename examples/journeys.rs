@@ -1,22 +1,22 @@
 #![feature(backtrace)]
 
 use hafas_client::requester::hyper::HyperRustlsRequester;
-use hafas_client::profile::db::DbProfile;
+use hafas_client::profile::sncf::SncfProfile;
 use hafas_client::client::HafasClient;
-use hafas_client::api::journeys::JourneyOptions;
+use hafas_client::api::journeys::JourneysOptions;
 use hafas_client::TariffClass;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() {
-    let c = HafasClient::new(DbProfile, HyperRustlsRequester::new());
-    let from = c.suggestions("Berlin Hbf", None).await.unwrap()[0].clone();
-    let to = c.suggestions("Hannover Hbf", None).await.unwrap()[0].clone();
-    //println!("{:#?}", &from);
-    //println!("{:#?}", &to);
-    let mut opts = JourneyOptions::default();
-    opts.stopovers = Some(true);
-    opts.polylines = Some(true);
+    let c = HafasClient::new(SncfProfile, HyperRustlsRequester::new());
+    let from = c.locations("Capvern", None).await.unwrap()[0].clone();
+    let to = c.locations("Paris Montparnasse", None).await.unwrap()[0].clone();
+    eprintln!("{:#?}", &from);
+    eprintln!("{:#?}", &to);
+    let mut opts = JourneysOptions::default();
+    //opts.stopovers = Some(true);
+    //opts.polylines = Some(true);
     //opts.tariff_class = Some(TariffClass::First);
     //opts.departure = Some(1643413595);
     match c.journeys(from, to, opts).await {

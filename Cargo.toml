@@ -32,9 +32,10 @@ geojson = "0.22"
 polyline = "0.9"
 
 [features]
-default = [ "hyper-requester", "db-profile" ]
+default = [ "hyper-requester", "db-profile", "sncf-profile" ]
 hyper-requester = [ "hyper-rustls", "hyper" ]
 db-profile = []
+sncf-profile = []
 
 [dev-dependencies]
 tokio = { version = "1.15", features = [ "rt-multi-thread", "macros" ] }

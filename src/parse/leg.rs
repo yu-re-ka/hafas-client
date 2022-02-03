@@ -2,7 +2,7 @@ use crate::Leg;
 use crate::ParseResult;
 use serde::Deserialize;
 use chrono::NaiveDate;
-use crate::parse::journeys_response::CommonData;
+use crate::parse::common::CommonData;
 use crate::parse::stopover::{HafasStopover, parse_stopover};
 use crate::parse::arrival_or_departure::{HafasArrivalOrDeparture, parse_arrival_or_departure};
 use geojson::FeatureCollection;
@@ -88,7 +88,7 @@ pub struct HafasLeg {
     r#type: HafasLegType,
 }
 
-pub fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
+pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
     let HafasLeg { dep, arr, jny, gis, r#type } = data;
     let origin = common.places.get(dep.loc_x).cloned()
         .ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?

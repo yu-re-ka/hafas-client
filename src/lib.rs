@@ -11,7 +11,7 @@ pub mod format;
 pub use client::Client;
 pub use profile::Profile;
 pub use requester::Requester;
-pub use error::{Error, Result, ParseResult};
+pub use error::{Error, Result, ParseError, ParseResult};
 use chrono::FixedOffset;
 use chrono::DateTime;
 use geojson::FeatureCollection;
@@ -21,30 +21,31 @@ use serde::{Serialize, Deserialize};
 /* Types */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Location {
-    pub latitude: f32,
-    pub longitude: f32,
+#[serde(untagged)]
+pub enum Location {
+    Address {
+        address: String,
+        latitude: f32,
+        longitude: f32,
+    },
+    Point {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        poi: Option<bool>,
+        latitude: f32,
+        longitude: f32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type")]
+#[serde(rename_all = "lowercase")]
 pub enum Place {
-    Stop {
-        id: String,
-        name: String,
-        location: Location,
-        products: Products,
-        //station: Option<Station>,
-    },
-    Address {
-        address: String,
-        location: Location,
-    },
-    Point {
-        id: String,
-        name: String,
-        location: Location,
-    },
+    Stop(Stop),
+    Location(Location),
 }
 
 /*#[derive(Debug, Clone, Serialize)]
@@ -56,9 +57,20 @@ pub struct Station {
 }*/
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stop {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub location: Option<Location>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub products: Option<Products>,
+    //station: Option<Station>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Products {
-    pub national_exp: bool,
+    pub national_express: bool,
     pub national: bool,
     pub regional_exp: bool,
     pub regional: bool,
@@ -73,7 +85,7 @@ pub struct Products {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Product {
-    NationalExp,
+    NationalExpress,
     National,
     RegionalExp,
     Regional,
@@ -98,7 +110,7 @@ pub enum Mode {
 impl Product {
     fn mode(&self) -> Mode {
         match *self {
-            Product::NationalExp => Mode::Train,
+            Product::NationalExpress => Mode::Train,
             Product::National => Mode::Train,
             Product::RegionalExp => Mode::Train,
             Product::Regional => Mode::Train,
@@ -200,7 +212,9 @@ pub struct Stopover {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Journey {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
     pub legs: Vec<Leg>,
     //last_updated
@@ -233,7 +247,7 @@ pub struct Remark {
 impl Products {
     pub fn all() -> Products {
         Products {
-            national_exp: true,
+            national_express: true,
             national: true,
             regional_exp: true,
             regional: true,
