@@ -125,8 +125,8 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
     let mut load_factor = None;
     let mut remarks = None;
     let mut polyline = None;
-    let mut is_walking = None;
-    let mut is_transfer = None;
+    let mut walking = None;
+    let mut transfer = None;
     let mut distance = None;
 
     match r#type {
@@ -162,11 +162,11 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
             }).transpose()?.and_then(|x| x);
         },
         HafasLegType::Walk => {
-            is_walking = Some(true);
+            walking = Some(true);
             distance = Some(gis.ok_or_else(|| "missing field gis")?.dist);
         },
         HafasLegType::Transfer | HafasLegType::Devi => {
-            is_transfer = Some(true);
+            transfer = Some(true);
         },
     }
 
@@ -192,8 +192,8 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
         load_factor,
         remarks,
         polyline,
-        is_walking,
-        is_transfer,
+        walking,
+        transfer,
         distance,
     })
 }
