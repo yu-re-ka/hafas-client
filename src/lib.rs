@@ -131,6 +131,7 @@ pub enum TariffClass {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Accessibility {
     r#None,
     Partial,
