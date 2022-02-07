@@ -13,7 +13,7 @@ pub struct HafasRemark {
     jid: Option<String>,
 }
 
-pub fn parse_remark(rem: HafasRemark) -> ParseResult<Remark> {
+pub fn default_parse_remark(rem: HafasRemark) -> ParseResult<Remark> {
     Ok(match rem.r#type.as_deref() {
         Some("M") | Some("P") => Remark {
             r#type: RemarkType::Status,

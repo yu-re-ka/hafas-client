@@ -1,5 +1,5 @@
 use crate::{ParseResult, Place, Location, Stop};
-use super::products::parse_products;
+use crate::Profile;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -18,20 +18,20 @@ pub struct HafasPlace {
     p_cls: Option<u16>,
 }
 
-fn parse_coords(coords: HafasCoords) -> (f32, f32) {
+pub(crate) fn default_parse_coords(coords: HafasCoords) -> (f32, f32) {
     (coords.x as f32 / 1000000.0, coords.y as f32 / 1000000.0)
 }
 
-pub fn parse_place(data: HafasPlace) -> ParseResult<Place> {
+pub(crate) fn default_parse_place<P: Profile>(profile: &P, data: HafasPlace) -> ParseResult<Place> {
     let HafasPlace { r#type, name, crd, ext_id, p_cls } = data;
-    let coords = parse_coords(crd);
+    let coords = profile.parse_coords(crd);
     match r#type.as_deref() {
         Some("S") => {
             let id = ext_id.ok_or_else(|| "Missing ext_id")?;
             Ok(Place::Stop(Stop {
                 id: id.clone(),
                 name: Some(name),
-                products: p_cls.map(|p_cls| parse_products(p_cls)),
+                products: p_cls.map(|p_cls| profile.parse_products(p_cls)),
                 location: Some(Location::Point {
                     id: Some(id),
                     name: None,

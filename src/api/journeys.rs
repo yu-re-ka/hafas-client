@@ -4,7 +4,6 @@ use crate::{Place, Accessibility, Products, Result, Profile, Requester, Client, 
 use crate::client::HafasClient;
 use crate::format::ToHafas;
 use ijson::ijson;
-use crate::parse::journeys_response::parse_journeys_response;
 use serde::Serialize;
 use serde::Deserialize;
 use crate::Journey;
@@ -29,6 +28,7 @@ pub struct JourneysOptions {
     pub departure: Option<i64>,
     pub products: Option<Products>,
     pub tariff_class: Option<TariffClass>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,9 +43,9 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
         &self,
         from: Place,
         to: Place,
-        options: JourneysOptions,
+        opts: JourneysOptions,
     ) -> Result<JourneysResponse> {
-        let (when, is_departure) = match (options.departure, options.arrival) {
+        let (when, is_departure) = match (opts.departure, opts.arrival) {
             (Some(_), Some(_)) => {
                 Err(Error::InvalidInput("departure and arrival are mutually exclusive".to_string()))?
             },
@@ -54,56 +54,61 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
             (None, None) => (Utc::now().naive_utc(), true),
         };
 
-        let tariff_class = options.tariff_class.unwrap_or(TariffClass::Second);
+        let tariff_class = opts.tariff_class.unwrap_or(TariffClass::Second);
 
         let data = self.request(ijson!({
-    		"cfg": {
-    			"polyEnc": "GPA"
-    		},
-    		"meth": "TripSearch",
-    		"req": {
-    			"ctxScr": null,
-    			"getPasslist": options.stopovers.unwrap_or(false),
-    			"maxChg": options.transfers.unwrap_or(-1),
-    			"minChgTime": options.transfer_time.unwrap_or(0),
-    			"numF": options.results.unwrap_or(5),
-    			"depLocL": [ from.to_hafas() ],
-    			"viaLocL": [],
-    			"arrLocL": [ to.to_hafas() ],
-    			"jnyFltrL": [
-    				{
-    					"type": "PROD",
-    					"mode": "INC",
-    					"value": options.products.unwrap_or_else(|| Products::all()).to_hafas(),
-    				},
-    				{
-    					"type": "META",
-    					"mode": "INC",
-    					"meta": options.accessibility.unwrap_or(Accessibility::r#None).to_hafas(),
-    				}
-    			],
-    			"gisFltrL": [],
-    			"getTariff": options.tickets.unwrap_or(true),
-    			"ushrp": options.start_with_walking.unwrap_or(true),
-    			"getPT": true,
-    			"getIV": false,
-    			"getPolyline": options.polylines.unwrap_or(false),
-    			"outFrwd": is_departure,
-    			"outDate": when.format("%Y%m%d").to_string(),
-    			"outTime": when.format("%H%M%S").to_string(),
-    			"trfReq": {
-    				"jnyCl": tariff_class.to_hafas(),
-    				"tvlrProf": [
-    					{
-    						"type": "E",
-    						"redtnCard": null,
-    					}
-    				],
-    				"cType": "PK"
-    			}
-    		}
+            "svcReqL": [
+                {
+                    "cfg": {
+                        "polyEnc": "GPA"
+                    },
+                    "meth": "TripSearch",
+                    "req": {
+                        "ctxScr": null,
+                        "getPasslist": opts.stopovers.unwrap_or(false),
+                        "maxChg": opts.transfers.unwrap_or(-1),
+                        "minChgTime": opts.transfer_time.unwrap_or(0),
+                        "numF": opts.results.unwrap_or(5),
+                        "depLocL": [ from.to_hafas() ],
+                        "viaLocL": [],
+                        "arrLocL": [ to.to_hafas() ],
+                        "jnyFltrL": [
+                            {
+                                "type": "PROD",
+                                "mode": "INC",
+                                "value": opts.products.unwrap_or_else(|| Products::all()).to_hafas(),
+                            },
+                            {
+                                "type": "META",
+                                "mode": "INC",
+                                "meta": opts.accessibility.unwrap_or(Accessibility::r#None).to_hafas(),
+                            }
+                        ],
+                        "gisFltrL": [],
+                        "getTariff": opts.tickets.unwrap_or(true),
+                        "ushrp": opts.start_with_walking.unwrap_or(true),
+                        "getPT": true,
+                        "getIV": false,
+                        "getPolyline": opts.polylines.unwrap_or(false),
+                        "outFrwd": is_departure,
+                        "outDate": when.format("%Y%m%d").to_string(),
+                        "outTime": when.format("%H%M%S").to_string(),
+                        "trfReq": {
+                            "jnyCl": tariff_class.to_hafas(),
+                            "tvlrProf": [
+                                {
+                                    "type": "E",
+                                    "redtnCard": null,
+                                }
+                            ],
+                            "cType": "PK"
+                        }
+                    }
+                }
+            ],
+            "lang": opts.language.as_deref().unwrap_or("en"),
         })).await?;
 
-        Ok(parse_journeys_response(data, tariff_class)?)
+        Ok(self.profile.parse_journeys_response(data, tariff_class)?)
     }
 }

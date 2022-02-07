@@ -213,11 +213,18 @@ pub struct Stopover {
 }
 
 #[derive(Debug, Serialize)]
+pub struct Price {
+    amount: f64,
+    currency: String,
+}
+
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Journey {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
     pub legs: Vec<Leg>,
+    pub price: Option<Price>,
     //last_updated
 }
 

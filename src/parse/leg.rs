@@ -1,10 +1,11 @@
 use crate::Leg;
+use crate::Profile;
 use crate::ParseResult;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;
 use crate::parse::common::CommonData;
-use crate::parse::stopover::{HafasStopover, parse_stopover};
-use crate::parse::arrival_or_departure::{HafasArrivalOrDeparture, parse_arrival_or_departure};
+use crate::parse::stopover::HafasStopover;
+use crate::parse::arrival_or_departure::HafasArrivalOrDeparture;
 use geojson::FeatureCollection;
 
 #[derive(Debug, Deserialize)]
@@ -62,7 +63,7 @@ pub struct HafasLegDep {
     loc_x: usize,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum HafasLegType {
     #[serde(rename = "JNY")]
     Journey,
@@ -88,7 +89,7 @@ pub struct HafasLeg {
     r#type: HafasLegType,
 }
 
-pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
+pub(crate) fn default_parse_leg<P: Profile>(profile: &P, data: HafasLeg, common: &CommonData, date: &NaiveDate) -> ParseResult<Leg> {
     let HafasLeg { dep, arr, jny, gis, r#type } = data;
     let origin = common.places.get(dep.loc_x).cloned()
         .ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?
@@ -96,7 +97,7 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
     let destination = common.places.get(arr.loc_x).cloned()
         .ok_or_else(|| format!("Invalid place index: {}", arr.loc_x))?
         .ok_or_else(|| format!("Parse error place index: {}", arr.loc_x))?;
-    let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {
+    let dep = profile.parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: dep.d_t_z_offset,
         time_s: dep.d_time_s,
         time_r: dep.d_time_r,
@@ -104,7 +105,7 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
         platf_r: dep.d_platf_r,
         cncl: dep.d_cncl,
     }, date)?;
-    let arr = parse_arrival_or_departure(HafasArrivalOrDeparture {
+    let arr = profile.parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: arr.a_t_z_offset,
         time_s: arr.a_time_s,
         time_r: arr.a_time_r,
@@ -140,7 +141,7 @@ pub(crate) fn parse_leg(data: HafasLeg, common: &CommonData, date: &NaiveDate) -
             reachable = is_rchbl;
             trip_id = Some(jid);
             direction = dir_txt;
-            stopovers = stop_l.map(|x| x.into_iter().map(|x| parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
+            stopovers = stop_l.map(|x| x.into_iter().map(|x| profile.parse_stopover(x, common, date)).collect::<ParseResult<_>>()).transpose()?;
             remarks = Some(msg_l.into_iter().map(|x| {
                 common.remarks.get(x.rem_x).cloned()
                     .ok_or_else(|| format!("Invalid remark index: {}", x.rem_x).into())

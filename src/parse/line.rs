@@ -1,8 +1,8 @@
 use crate::ParseResult;
+use crate::Profile;
 use crate::Line;
 use crate::Operator;
 use serde::Deserialize;
-use crate::parse::products::parse_product;
 
 #[derive(Debug, Deserialize)]
 pub struct HafasLineProdCtx {
@@ -20,9 +20,9 @@ pub struct HafasLine {
     cls: Option<u16>,
 }
 
-pub fn parse_line(data: HafasLine, operators: &Vec<Operator>) -> ParseResult<Line> {
+pub(crate) fn default_parse_line<P: Profile>(profile: &P, data: HafasLine, operators: &Vec<Operator>) -> ParseResult<Line> {
     let HafasLine { line, add_name, name, prod_ctx, opr_x, cls } = data;
-    let product = parse_product(cls.ok_or_else(|| "Missing cls field")?)?;
+    let product = profile.parse_product(cls.ok_or_else(|| "Missing cls field")?)?;
     Ok(Line {
         name: line.or(add_name).or(name),
         fahrt_nr: prod_ctx.and_then(|x| x.num.clone()),

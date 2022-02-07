@@ -16,7 +16,7 @@ pub struct HafasPolyline {
     pp_loc_ref_l: Vec<HafasPolylineLocRef>,
 }
 
-pub fn parse_polyline(data: HafasPolyline) -> ParseResult<Vec<Feature>> {
+pub(crate) fn default_parse_polyline(data: HafasPolyline) -> ParseResult<Vec<Feature>> {
     let HafasPolyline { crd_enc_y_x, pp_loc_ref_l } = data;
     let coords = polyline::decode_polyline(&crd_enc_y_x, 5)?;
 

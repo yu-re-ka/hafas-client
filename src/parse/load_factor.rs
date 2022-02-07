@@ -52,7 +52,7 @@ pub struct LoadFactorEntry {
     pub load: LoadFactor,
 }
 
-pub fn parse_load_factor_entry(h: HafasLoadFactorEntry) -> ParseResult<LoadFactorEntry> {
+pub fn default_parse_load_factor_entry(h: HafasLoadFactorEntry) -> ParseResult<LoadFactorEntry> {
     Ok(LoadFactorEntry {
         class: h.c.into(),
         load: h.r.into(),

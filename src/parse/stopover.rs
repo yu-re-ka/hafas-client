@@ -1,9 +1,10 @@
 use crate::ParseResult;
 use crate::Stopover;
+use crate::Profile;
 use chrono::NaiveDate;
 use serde::Deserialize;
 use crate::parse::common::CommonData;
-use crate::parse::arrival_or_departure::{HafasArrivalOrDeparture, parse_arrival_or_departure};
+use crate::parse::arrival_or_departure::HafasArrivalOrDeparture;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,10 +24,10 @@ pub struct HafasStopover {
     d_cncl: Option<bool>,
 }
 
-pub(crate) fn parse_stopover(data: HafasStopover, common: &CommonData, date: &NaiveDate) -> ParseResult<Stopover> {
+pub(crate) fn default_parse_stopover<P: Profile>(profile: &P, data: HafasStopover, common: &CommonData, date: &NaiveDate) -> ParseResult<Stopover> {
     let HafasStopover { loc_x, a_t_z_offset, a_time_s, a_time_r, a_platf_s, a_platf_r, a_cncl, d_t_z_offset, d_time_s, d_time_r, d_platf_s, d_platf_r, d_cncl } = data;
     let stop = common.places.get(loc_x).and_then(|x| x.clone()).ok_or_else(|| format!("Invalid place index {}", loc_x))?;
-    let dep = parse_arrival_or_departure(HafasArrivalOrDeparture {
+    let dep = profile.parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: d_t_z_offset,
         time_s: d_time_s,
         time_r: d_time_r,
@@ -34,7 +35,7 @@ pub(crate) fn parse_stopover(data: HafasStopover, common: &CommonData, date: &Na
         platf_r: d_platf_r,
         cncl: d_cncl,
     }, date)?;
-    let arr = parse_arrival_or_departure(HafasArrivalOrDeparture {
+    let arr = profile.parse_arrival_or_departure(HafasArrivalOrDeparture {
         t_z_offset: a_t_z_offset,
         time_s: a_time_s,
         time_r: a_time_r,

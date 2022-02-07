@@ -1,7 +1,6 @@
 use crate::{Result, Profile, Requester, Client, TariffClass};
 use crate::client::HafasClient;
 use ijson::ijson;
-use crate::parse::journeys_response::parse_journeys_response;
 use crate::parse::journeys_response::HafasJourneysResponse;
 use serde::Serialize;
 use serde::Deserialize;
@@ -13,6 +12,7 @@ pub struct RefreshJourneyOptions {
     pub polylines: Option<bool>,
     pub tickets: Option<bool>,
     pub tariff_class: Option<TariffClass>,
+    pub language: Option<String>,
 }
 
 pub type RefreshJourneyResponse = Journey;
@@ -21,23 +21,28 @@ impl<P: Profile + Sync + Send, R: Requester + Sync + Send> HafasClient<P, R> {
     pub async fn refresh_journey(
         &self,
         refresh_token: &str,
-        options: RefreshJourneyOptions,
+        opts: RefreshJourneyOptions,
     ) -> Result<RefreshJourneyResponse> {
-        let tariff_class = options.tariff_class.unwrap_or(TariffClass::Second);
+        let tariff_class = opts.tariff_class.unwrap_or(TariffClass::Second);
 
         let data: HafasJourneysResponse = self.request(ijson!({
-            "cfg": {},
-            "meth": "Reconstruction",
-            "req": {
-                    "ctxRecon": refresh_token,
-                    "getIST": true,
-                    "getPasslist": options.stopovers.unwrap_or(false),
-                    "getPolyline": options.polylines.unwrap_or(false),
-                    "getTariff": options.tickets.unwrap_or(false),
-            }
+            "svcReqL": [
+                {
+                    "cfg": {},
+                    "meth": "Reconstruction",
+                    "req": {
+                        "ctxRecon": refresh_token,
+                        "getIST": true,
+                        "getPasslist": opts.stopovers.unwrap_or(false),
+                        "getPolyline": opts.polylines.unwrap_or(false),
+                        "getTariff": opts.tickets.unwrap_or(false),
+                    }
+                }
+            ],
+            "lang": opts.language.as_deref().unwrap_or("en"),
         })).await?;
 
-        let mut journeys = parse_journeys_response(data, tariff_class)?;
+        let mut journeys = self.profile.parse_journeys_response(data, tariff_class)?;
         Ok(journeys.journeys.remove(0))
     }
 }

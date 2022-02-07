@@ -1,8 +1,8 @@
 use crate::ParseResult;
+use crate::Profile;
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono::FixedOffset;
-use crate::parse::date::parse_date;
 
 pub struct HafasArrivalOrDeparture {
     pub t_z_offset: Option<i32>,
@@ -22,10 +22,10 @@ pub struct ArrivalOrDeparture {
     pub cancelled: Option<bool>,
 }
 
-pub fn parse_arrival_or_departure(data: HafasArrivalOrDeparture, date: &NaiveDate) -> ParseResult<ArrivalOrDeparture> {
+pub(crate) fn default_parse_arrival_or_departure<P: Profile>(profile: &P, data: HafasArrivalOrDeparture, date: &NaiveDate) -> ParseResult<ArrivalOrDeparture> {
     let HafasArrivalOrDeparture { t_z_offset, time_s, time_r, platf_s, platf_r, cncl } = data;
-    let planned_time = parse_date(time_s, t_z_offset, date)?;
-    let rt_time = parse_date(time_r, t_z_offset, date)?;
+    let planned_time = profile.parse_date(time_s, t_z_offset, date)?;
+    let rt_time = profile.parse_date(time_r, t_z_offset, date)?;
     Ok(ArrivalOrDeparture {
         platform: platf_r.or(platf_s.clone()),
         planned_platform: platf_s,

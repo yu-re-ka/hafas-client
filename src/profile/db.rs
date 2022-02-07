@@ -28,4 +28,6 @@ impl Profile for DbProfile {
     fn prepare_headers(&self, headers: &mut HashMap<&str, &str>) {
         headers.insert("User-Agent", "my-awesome-e5f276d8fe6cprogram");
     }
+
+    fn price_currency(&self) -> &'static str { "EUR" }
 }

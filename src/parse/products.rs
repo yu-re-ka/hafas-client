@@ -2,7 +2,7 @@ use crate::ParseResult;
 use crate::Products;
 use crate::Product;
 
-pub fn parse_products(p_cls: u16) -> Products {
+pub(crate) fn default_parse_products(p_cls: u16) -> Products {
     Products {
         national_express: p_cls & 0b0000_0000_0001 != 0,
         national:         p_cls & 0b0000_0000_0010 != 0,
@@ -17,7 +17,7 @@ pub fn parse_products(p_cls: u16) -> Products {
     }
 }
 
-pub fn parse_product(p_cls: u16) -> ParseResult<Product> {
+pub(crate) fn default_parse_product(p_cls: u16) -> ParseResult<Product> {
     Ok(match p_cls {
          0b0000_0000_0001 => Product::NationalExpress,
          0b0000_0000_0010 => Product::National,

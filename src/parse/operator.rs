@@ -7,7 +7,7 @@ pub struct HafasOperator {
     name: String,
 }
 
-pub fn parse_operator(data: HafasOperator) -> ParseResult<Operator> {
+pub(crate) fn default_parse_operator(data: HafasOperator) -> ParseResult<Operator> {
     let HafasOperator { name } = data;
     Ok(Operator {
         id: name.clone(), // FIXME
